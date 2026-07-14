@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Allocation Engine — Max-Min Fairness Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #EDF1F5;
+    --bg-line: rgba(27,42,74,0.07);
+    --surface: #FFFFFF;
+    --ink: #1B2A4A;
+    --ink-soft: #34507A;
+    --ink-muted: #5C6E8C;
+    --line: #C4D0E0;
+    --accent: #F2A93B;
+    --accent-deep: #C97E1B;
+    --accent-soft: #FBE4BB;
+    --track: #E1E7F0;
+    --good: #2E7D5B;
+    --radius: 3px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(0deg, var(--bg-line) 0px, var(--bg-line) 1px, transparent 1px, transparent 32px),
+      repeating-linear-gradient(90deg, var(--bg-line) 0px, var(--bg-line) 1px, transparent 1px, transparent 32px),
+      var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    padding: 40px 24px 80px;
+    line-height: 1.5;
+  }
+
+  .wrap{ max-width: 980px; margin: 0 auto; }
+
+  header.masthead{
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 18px;
+    margin-bottom: 28px;
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .eyebrow{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+    margin: 0 0 6px;
+  }
+  h1{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(28px, 4vw, 38px);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .masthead-meta{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-align: right;
+  }
+
+  section{ margin-bottom: 32px; }
+
+  .panel{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .panel-head{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-head h2{
+    font-family: var(--font-display);
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+  }
+  .panel-body{ padding: 18px; }
+
+  /* Dealer manifest table */
+  table.manifest{
+    width:100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+  table.manifest th{
+    text-align:left;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-muted);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  table.manifest td{
+    padding: 6px 8px;
+    border-bottom: 1px dashed var(--line);
+  }
+  table.manifest input[type=text], table.manifest input[type=number]{
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 6px 8px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  table.manifest input:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row-remove{
+    background:none; border:none; cursor:pointer;
+    color: var(--ink-muted); font-size: 16px; line-height:1;
+    padding: 4px 8px;
+  }
+  .row-remove:hover{ color: #B23A3A; }
+
+  .manifest-footer{
+    display:flex; justify-content: space-between; align-items:center;
+    margin-top: 14px; flex-wrap: wrap; gap: 12px;
+  }
+
+  .btn{
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: var(--radius);
+    padding: 9px 16px;
+    cursor: pointer;
+    border: 1px solid var(--ink);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .btn:hover{ background: var(--track); }
+  .btn.primary{
+    background: var(--ink);
+    color: var(--surface);
+    border-color: var(--ink);
+  }
+  .btn.primary:hover{ background: #0F1B33; }
+  .btn.accent{
+    background: var(--accent);
+    border-color: var(--accent-deep);
+    color: var(--ink);
+  }
+  .btn.accent:hover{ background: var(--accent-deep); color:#fff; }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .btn.small{ padding: 6px 10px; font-size: 12px; }
+
+  .supply-field{ display:flex; align-items:center; gap:10px; font-family: var(--font-mono); font-size:14px; }
+  .supply-field input{
+    width: 120px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight:600;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  /* Summary cards */
+  .summary-grid{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow:hidden;
+    margin-bottom: 22px;
+  }
+  .summary-card{
+    background: var(--surface);
+    padding: 14px 16px;
+  }
+  .summary-card .label{
+    font-size: 11px; text-transform: uppercase; letter-spacing:0.06em;
+    color: var(--ink-muted); margin-bottom: 6px;
+  }
+  .summary-card .value{
+    font-family: var(--font-mono); font-weight:600; font-size: 22px;
+  }
+  .summary-card.flag .value{ color: var(--accent-deep); }
+
+  /* Bars / water-fill visual */
+  .bars{ display:flex; flex-direction: column; gap: 14px; }
+  .bar-row{ display:grid; grid-template-columns: 120px 1fr 90px; align-items:center; gap: 12px; }
+  .bar-name{ font-family: var(--font-mono); font-size: 13px; font-weight:600; }
+  .bar-track{
+    position:relative;
+    height: 22px;
+    background: var(--track);
+    border-radius: 2px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .bar-fill{
+    position:absolute; top:0; left:0; height:100%;
+    background: var(--accent);
+    transition: width 0.5s ease;
+  }
+  .bar-demand-mark{
+    position:absolute; top:0; bottom:0; width: 2px;
+    background: var(--ink);
+  }
+  .bar-value{ font-family: var(--font-mono); font-size: 13px; text-align:right; }
+
+  .waterline-legend{
+    display:flex; gap: 18px; font-family: var(--font-mono); font-size: 12px;
+    color: var(--ink-muted); margin-top: 8px; flex-wrap:wrap;
+  }
+  .swatch{ display:inline-block; width:10px; height:10px; margin-right:5px; vertical-align:middle; }
+
+  /* Replay controls */
+  .replay-controls{
+    display:flex; align-items:center; gap: 10px; margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .replay-status{
+    font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted);
+  }
+
+  /* Trace log */
+  .trace-log{
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: #10182A;
+    color: #D9E2F1;
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+  .trace-round{ margin-bottom: 16px; }
+  .trace-round:last-child{ margin-bottom:0; }
+  .trace-round-title{
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 6px;
+    border-bottom: 1px dashed rgba(255,255,255,0.15);
+    padding-bottom: 4px;
+  }
+  .trace-line{ padding: 2px 0; color: #B9C6E0; }
+  .trace-line.capped{ color: #F2A93B; }
+  .trace-line.final{ color: #7FD9A8; }
+
+  footer.notes{
+    margin-top: 40px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+
+  @media (max-width: 640px){
+    .summary-grid{ grid-template-columns: repeat(2,1fr); }
+    .bar-row{ grid-template-columns: 90px 1fr 70px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .bar-fill{ transition: none; }
+  }
+
+  :focus-visible{ outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Fleet Allocation Engine — Prototype</p>
+      <h1>Max-Min Fairness Simulator</h1>
+    </div>
+    <div class="masthead-meta">
+      MANIFEST&nbsp;NO. MMF-001<br>
+      Vehicle-to-Dealer Distribution
+    </div>
+  </header>
+
+  <section>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>1 · Input Manifest</h2>
+        <button class="btn small" id="loadExample" type="button">Load example</button>
+      </div>
+      <div class="panel-body">
+        <table class="manifest" id="dealerTable">
+          <thead>
+            <tr>
+              <th style="width:45%">Dealer</th>
+              <th style="width:35%">Vehicles requested</th>
+              <th style="width:20%"></th>
+            </tr>
+          </thead>
+          <tbody id="dealerRows"></tbody>
+        </table>
+
+        <div class="manifest-footer">
+          <button class="btn small" id="addDealer" type="button">+ Add dealer</button>
+          <div class="supply-field">
+            <label for="supplyInput">Total vehicles available:</label>
+            <input type="number" id="supplyInput" min="0" value="100">
+          </div>
+        </div>
+
+        <div style="margin-top:18px; display:flex; gap:10px;">
+          <button class="btn accent" id="runBtn" type="button">Run allocation</button>
+          <button class="btn" id="resetBtn" type="button">Reset</button>
+        </div>
+        <p id="errorMsg" style="color:#B23A3A; font-family: var(--font-mono); font-size:13px; margin: 10px 0 0; display:none;"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="resultsSection" style="display:none;">
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <div class="panel" style="margin-bottom: 22px;">
+      <div class="panel-head">
+        <h2>2 · Allocation vs. Demand</h2>
+      </div>
+      <div class="panel-body">
+        <div class="replay-controls">
+          <button class="btn small" id="stepBack" type="button">◀ Prev round</button>
+          <button class="btn small" id="stepFwd" type="button">Next round ▶</button>
+          <button class="btn small" id="stepPlay" type="button">▶ Play</button>
+          <span class="replay-status" id="replayStatus"></span>
+        </div>
+        <div class="bars" id="barsContainer"></div>
+        <div class="waterline-legend">
+          <span><span class="swatch" style="background:var(--accent);"></span>Allocated so far</span>
+          <span><span class="swatch" style="background:var(--track); border:1px solid var(--line);"></span>Track = total demand</span>
+          <span><span class="swatch" style="background:var(--ink); width:2px; height:12px; display:inline-block;"></span>Demand marker</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>3 · Round-by-Round Logic Trace</h2>
+      </div>
+      <div class="panel-body">
+        <div class="trace-log" id="traceLog"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="notes">
+    Algorithm: unweighted max-min (water-filling) fairness. Each round, remaining supply is split equally
+    across dealers whose demand is not yet fully met; any dealer whose remaining demand is below that
+    equal share is capped at their demand, and the leftover is redistributed in the next round. See
+    ALGORITHM.md in this repo for the full write-up.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const dealerRows = document.getElementById('dealerRows');
+  const supplyInput = document.getElementById('supplyInput');
+  const errorMsg = document.getElementById('errorMsg');
+  const resultsSection = document.getElementById('resultsSection');
+
+  let dealerIdCounter = 0;
+
+  function addDealerRow(name, demand){
+    dealerIdCounter++;
+    const tr = document.createElement('tr');
+    tr.dataset.id = dealerIdCounter;
+    tr.innerHTML = `
+      <td><input type="text" class="dealer-name" value="${name}"></td>
+      <td><input type="number" class="dealer-demand" min="0" value="${demand}"></td>
+      <td><button class="row-remove" type="button" title="Remove dealer">✕</button></td>
+    `;
+    tr.querySelector('.row-remove').addEventListener('click', () => {
+      tr.remove();
+    });
+    dealerRows.appendChild(tr);
+  }
+
+  function loadExample(){
+    dealerRows.innerHTML = '';
+    addDealerRow('Dealer A — Downtown', 40);
+    addDealerRow('Dealer B — Suburban Mall', 25);
+    addDealerRow('Dealer C — Highway Plaza', 60);
+    addDealerRow('Dealer D — Airport Route', 15);
+    addDealerRow('Dealer E — Industrial Park', 30);
+    supplyInput.value = 100;
+  }
+
+  document.getElementById('addDealer').addEventListener('click', () => addDealerRow('New dealer', 0));
+  document.getElementById('loadExample').addEventListener('click', loadExample);
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    dealerRows.innerHTML = '';
+    addDealerRow('Dealer A', 0);
+    supplyInput.value = 100;
+    resultsSection.style.display = 'none';
+  });
+
+  // ---------- Max-Min Fairness algorithm ----------
+  // Returns { allocation: [...], rounds: [ {waterLevel, cappedDealers:[{idx,amount}], note} ], surplus }
+  function maxMinFairness(names, demands, supply){
+    const n = demands.length;
+    const allocation = new Array(n).fill(0);
+    let remainingSupply = supply;
+    let active = names.map((_, i) => i).filter(i => demands[i] > 0);
+    const rounds = [];
+    let roundNum = 0;
+    const EPS = 1e-9;
+
+    while (active.length > 0 && remainingSupply > EPS){
+      roundNum++;
+      const share = remainingSupply / active.length;
+
+      // find dealers whose remaining demand <= share (they get capped this round)
+      const capped = [];
+      const notCapped = [];
+      active.forEach(i => {
+        const remainingDemand = demands[i] - allocation[i];
+        if (remainingDemand <= share + EPS){
+          capped.push({ idx: i, amount: remainingDemand });
+        } else {
+          notCapped.push(i);
+        }
+      });
+
+      if (capped.length > 0){
+        // Allocate capped dealers their full remaining demand
+        capped.forEach(c => {
+          allocation[c.idx] += c.amount;
+          remainingSupply -= c.amount;
+        });
+        rounds.push({
+          roundNum,
+          waterLevel: share,
+          activeCountBefore: active.length,
+          cappedDealers: capped.map(c => ({ idx: c.idx, name: names[c.idx], amount: c.amount })),
+          uncappedDealers: notCapped.map(i => names[i]),
+          remainingSupplyAfter: remainingSupply,
+          type: 'capped'
+        });
+        active = notCapped;
+      } else {
+        // Nobody capped: everyone in `active` gets the equal share
+        active.forEach(i => { allocation[i] += share; });
+        rounds.push({
+          roundNum,
+          waterLevel: share,
+          activeCountBefore: active.length,
+          cappedDealers: [],
+          uncappedDealers: active.map(i => names[i]),
+          equalShareGivenTo: active.map(i => names[i]),
+          remainingSupplyAfter: 0,
+          type: 'final'
+        });
+        remainingSupply = 0;
+        active = [];
+      }
+    }
+
+    const surplus = remainingSupply > EPS ? remainingSupply : 0;
+    return { allocation, rounds, surplus };
+  }
+
+  // ---------- Rendering ----------
+  let currentResult = null;
+  let currentNames = [];
+  let currentDemands = [];
+  let currentSupply = 0;
+  let stepIndex = 0; // 0 = before any round, N = after round N
+  let playTimer = null;
+
+  function computeSnapshotAllocation(upToRound){
+    // Recompute allocation as of end of round `upToRound` (0 = none run yet)
+    const n = currentNames.length;
+    const snap = new Array(n).fill(0);
+    for (let r = 0; r < upToRound; r++){
+      const round = currentResult.rounds[r];
+      if (round.type === 'capped'){
+        round.cappedDealers.forEach(c => { snap[c.idx] += c.amount; });
+        round.uncappedDealers.forEach(name => {
+          // uncapped dealers don't receive allocation in a 'capped' round
+        });
+      } else {
+        // final round: everyone remaining gets waterLevel
+        currentNames.forEach((name, i) => {
+          if (round.equalShareGivenTo.includes(name)){
+            snap[i] += round.waterLevel;
+          }
+        });
+      }
+    }
+    return snap;
+  }
+
+  function renderBars(snapAllocation){
+    const container = document.getElementById('barsContainer');
+    container.innerHTML = '';
+    const maxDemand = Math.max(...currentDemands, 1);
+    currentNames.forEach((name, i) => {
+      const demand = currentDemands[i];
+      const alloc = snapAllocation[i];
+      const pct = Math.min(100, (alloc / maxDemand) * 100);
+      const demandPct = Math.min(100, (demand / maxDemand) * 100);
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <div class="bar-name">${name}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%;"></div>
+          <div class="bar-demand-mark" style="left:${demandPct}%;"></div>
+        </div>
+        <div class="bar-value">${round2(alloc)} / ${round2(demand)}</div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function round2(x){
+    return Math.round(x * 100) / 100;
+  }
+
+  function renderSummary(){
+    const totalSupply = currentSupply;
+    const totalDemand = currentDemands.reduce((a,b) => a+b, 0);
+    const totalAllocated = currentResult.allocation.reduce((a,b) => a+b, 0);
+    const surplus = currentResult.surplus;
+
+    const grid = document.getElementById('summaryGrid');
+    grid.innerHTML = `
+      <div class="summary-card">
+        <div class="label">Total supply</div>
+        <div class="value">${round2(totalSupply)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Total demand</div>
+        <div class="value">${round2(totalDemand)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Total allocated</div>
+        <div class="value">${round2(totalAllocated)}</div>
+      </div>
+      <div class="summary-card ${surplus > 0 ? 'flag' : ''}">
+        <div class="label">Unallocated surplus</div>
+        <div class="value">${round2(surplus)}</div>
+      </div>
+    `;
+  }
+
+  function renderTrace(){
+    const log = document.getElementById('traceLog');
+    log.innerHTML = '';
+    currentResult.rounds.forEach(round => {
+      const div = document.createElement('div');
+      div.className = 'trace-round';
+      let lines = '';
+      lines += `<div class="trace-round-title">ROUND ${round.roundNum} — water level = ${round2(round.waterLevel)} units/dealer (supply split across ${round.activeCountBefore} active dealer${round.activeCountBefore===1?'':'s'})</div>`;
+
+      if (round.type === 'capped'){
+        round.cappedDealers.forEach(c => {
+          lines += `<div class="trace-line capped">↳ ${c.name}: remaining demand (${round2(c.amount)}) ≤ water level → CAPPED, allocated ${round2(c.amount)} in full, removed from pool</div>`;
+        });
+        if (round.uncappedDealers.length){
+          lines += `<div class="trace-line">↳ Still active next round: ${round.uncappedDealers.join(', ')}</div>`;
+        }
+        lines += `<div class="trace-line">↳ Supply remaining after this round: ${round2(round.remainingSupplyAfter)}</div>`;
+      } else {
+        lines += `<div class="trace-line final">↳ No dealer's remaining demand is below the water level — all remaining dealers receive the equal share of ${round2(round.waterLevel)}</div>`;
+        lines += `<div class="trace-line final">↳ Allocated to: ${round.equalShareGivenTo.join(', ')}</div>`;
+        lines += `<div class="trace-line final">↳ Supply fully distributed. Algorithm terminates.</div>`;
+      }
+      div.innerHTML = lines;
+      log.appendChild(div);
+    });
+
+    if (currentResult.surplus > 0){
+      const div = document.createElement('div');
+      div.className = 'trace-round';
+      div.innerHTML = `<div class="trace-line capped">Note: ${round2(currentResult.surplus)} unit(s) of supply remain unallocated — total demand was fully satisfied before supply ran out.</div>`;
+      log.appendChild(div);
+    }
+  }
+
+  function updateReplayStatus(){
+    const total = currentResult.rounds.length;
+    document.getElementById('replayStatus').textContent =
+      stepIndex === 0 ? `Showing: before allocation (0 / ${total} rounds)` :
+      `Showing: after round ${stepIndex} of ${total}`;
+    document.getElementById('stepBack').disabled = stepIndex === 0;
+    document.getElementById('stepFwd').disabled = stepIndex === currentResult.rounds.length;
+  }
+
+  function goToStep(idx){
+    stepIndex = Math.max(0, Math.min(currentResult.rounds.length, idx));
+    const snap = computeSnapshotAllocation(stepIndex);
+    renderBars(snap);
+    updateReplayStatus();
+  }
+
+  document.getElementById('stepBack').addEventListener('click', () => { stopPlay(); goToStep(stepIndex - 1); });
+  document.getElementById('stepFwd').addEventListener('click', () => { stopPlay(); goToStep(stepIndex + 1); });
+  document.getElementById('stepPlay').addEventListener('click', () => {
+    if (playTimer){ stopPlay(); return; }
+    document.getElementById('stepPlay').textContent = '⏸ Pause';
+    playTimer = setInterval(() => {
+      if (stepIndex >= currentResult.rounds.length){ stopPlay(); return; }
+      goToStep(stepIndex + 1);
+    }, 900);
+  });
+  function stopPlay(){
+    if (playTimer){ clearInterval(playTimer); playTimer = null; }
+    document.getElementById('stepPlay').textContent = '▶ Play';
+  }
+
+  document.getElementById('runBtn').addEventListener('click', () => {
+    errorMsg.style.display = 'none';
+    const rows = Array.from(dealerRows.querySelectorAll('tr'));
+    if (rows.length === 0){
+      showError('Add at least one dealer before running the allocation.');
+      return;
+    }
+    const names = [];
+    const demands = [];
+    for (const row of rows){
+      const name = row.querySelector('.dealer-name').value.trim() || 'Unnamed dealer';
+      const demand = parseFloat(row.querySelector('.dealer-demand').value);
+      if (isNaN(demand) || demand < 0){
+        showError(`"${name}" has an invalid demand value. Enter a non-negative number.`);
+        return;
+      }
+      names.push(name);
+      demands.push(demand);
+    }
+    const supply = parseFloat(supplyInput.value);
+    if (isNaN(supply) || supply < 0){
+      showError('Total vehicles available must be a non-negative number.');
+      return;
+    }
+
+    currentNames = names;
+    currentDemands = demands;
+    currentSupply = supply;
+    currentResult = maxMinFairness(names, demands, supply);
+    stepIndex = 0;
+
+    resultsSection.style.display = 'block';
+    renderSummary();
+    renderTrace();
+    goToStep(currentResult.rounds.length); // show final state by default
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  function showError(msg){
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+  }
+
+  // Init with example data
+  loadExample();
+})();
+</script>
+</body>
+</html>
