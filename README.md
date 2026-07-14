@@ -7,10 +7,15 @@ An interactive, single-file prototype simulating **max-min fairness** — a publ
 ## What it does
 
 - Takes user input: any number of dealers, each with a requested vehicle count, plus total available supply
-- Runs the max-min fairness (water-filling) algorithm client-side
+- Runs the max-min fairness (water-filling) algorithm client-side — **unweighted (V1)** by default, or **weighted (V2)** via an in-app toggle, where each dealer can be given a weight reflecting a proportionally larger or smaller claim on supply
 - Renders the final allocation as a bar chart against each dealer's original demand
-- Shows a full round-by-round trace of the algorithm's logic — which dealers got capped each round, at what water level, and why
+- Shows a full round-by-round trace of the algorithm's logic — which dealers got capped each round, at what water level, and why (the trace explicitly shows the weighted math when weighted mode is on)
 - Includes a step-through replay control so you can watch the allocation build up round by round rather than just seeing the final answer
+
+## Changelog
+
+- **V2** — added weighted max-min fairness as a toggle. Weights default to 1 (equivalent to V1) and can be edited per dealer. See `ALGORITHM.md` for the math.
+- **V1** — initial unweighted max-min fairness simulator.
 
 ## Why I built this
 

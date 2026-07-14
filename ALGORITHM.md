@@ -13,7 +13,7 @@ An OEM (or distributor) has a fixed supply of vehicles and a set of dealers, eac
 
 Think of supply as water being poured into a set of buckets (dealers), where each bucket has a maximum height (its demand). The rule: raise the water level equally across all buckets simultaneously. The moment a bucket hits its own maximum height (its demand is fully met), it stops rising and is removed from the pool — but the water level keeps rising for everyone else, using the supply that would have overflowed that bucket.
 
-**Formally, each round:**
+**Formally, each round (unweighted):**
 
 1. Take the dealers who still have unmet demand ("active" dealers).
 2. Compute the *water level* = remaining supply ÷ number of active dealers.
@@ -23,6 +23,24 @@ Think of supply as water being poured into a set of buckets (dealers), where eac
    - No dealer gets capped in a round → everyone left gets an equal share of what remains, and the algorithm terminates, or
    - Supply runs out, or
    - Every dealer's demand has been met (any leftover supply is reported as unallocated surplus).
+
+## V2: weighted max-min fairness
+
+The unweighted version above treats every dealer's claim on supply as identical. In practice, dealers often have a legitimate reason for an unequal claim — historical sell-through rate, contract tier, dealership size. **V2 generalizes the algorithm with a per-dealer weight**, toggleable in the tool.
+
+The water-filling intuition still holds, but instead of every bucket rising at the same rate, buckets rise at a rate proportional to their weight — a dealer with weight 2 fills twice as fast as a dealer with weight 1, for as long as both are still active.
+
+**Formally, each round (weighted):**
+
+1. Take the active dealers and sum their weights: `activeWeightSum`.
+2. Compute `t` = remaining supply ÷ `activeWeightSum` — this is the water level *per unit of weight*, not per dealer.
+3. Each active dealer's tentative allocation this round is `t × their own weight`.
+4. Any dealer whose remaining demand is **less than or equal to** their tentative allocation gets capped at their remaining demand and removed from the pool; the difference between their tentative allocation and what they actually needed flows back into the pool for the next round.
+5. Repeat until no one gets capped in a round (remaining active dealers each receive `t × weight`) or supply/demand is exhausted.
+
+Setting every weight to 1 makes `activeWeightSum` equal to the dealer count and collapses this exactly back to the V1 algorithm — the weighted version is a strict generalization, not a different algorithm.
+
+**Worked example (weighted):** Same five dealers and 100-unit supply as below, but now with weights A=1.5, B=1, C=2, D=0.5, E=1 (Dealer C, a larger dealership, has twice the claim of Dealer B or E; Dealer D, a smaller satellite location, has half). Result: A=25, B=16.67, C=33.33, D=8.33, E=16.67 — every unit of weight is treated equally, so C consistently receives roughly double what B or E get, and double what D gets four times over, for as long as all four remain in the active pool together.
 
 ## Why this is "fair" in a formal sense
 
@@ -45,6 +63,8 @@ Final allocation: A=21.25, B=21.25, C=21.25, D=15, E=21.25 — every dealer eith
 
 Each round removes at least one dealer from the active pool, so the algorithm terminates in at most *n* rounds for *n* dealers — O(n²) in the worst case with the naive re-scan-every-round approach used in this prototype (fine for the dealer-network scale this is designed for; a sorted-demand approach can bring this to O(n log n) if needed at larger scale).
 
-## Scope of this prototype
+## Scope
 
-This is an **unweighted** implementation — every dealer is treated as having equal claim to supply. A natural V2 extension is weighted max-min fairness (e.g., weighting by dealer size, historical sell-through rate, or contractual tier), which changes step 2 to divide supply proportionally to weight rather than equally. That's a deliberate scope cut for this prototype, not an oversight — see the [PRD collection](../prd-collection) for how this kind of scoping decision gets made and written up.
+- **V1** shipped unweighted only — every dealer treated as having equal claim to supply. That was a deliberate scope cut to get a correct, explainable baseline shipped first, not an oversight — see the [PRD collection](../prd-collection) for how this kind of scoping decision gets made and written up.
+- **V2** adds the weighted generalization described above, exposed as an explicit on/off toggle in the tool rather than replacing V1's behavior — unweighted stays the default so the simpler model is still available and the two are easy to compare side by side.
+- **Not yet in scope:** dynamic/time-varying weights (e.g., a weight that decays if a dealer under-sells their last allocation), and multi-resource allocation (allocating several vehicle trims/models simultaneously with cross-model constraints). Both are reasonable V3 candidates if this moved toward a real tool.
