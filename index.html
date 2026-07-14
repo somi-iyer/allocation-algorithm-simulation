@@ -183,6 +183,34 @@
     color: var(--ink);
   }
 
+  .weight-toggle-row{
+    display:flex; align-items:center; gap:10px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    font-family: var(--font-mono); font-size: 13px;
+  }
+  .switch{
+    position: relative; display:inline-block; width: 40px; height: 22px; flex-shrink:0;
+  }
+  .switch input{ opacity:0; width:0; height:0; }
+  .switch-track{
+    position:absolute; cursor:pointer; inset:0;
+    background: var(--line); border-radius: 22px; transition: background 0.2s;
+  }
+  .switch-track:before{
+    content:""; position:absolute; height: 16px; width: 16px; left:3px; bottom:3px;
+    background: var(--surface); border-radius:50%; transition: transform 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  .switch input:checked + .switch-track{ background: var(--accent-deep); }
+  .switch input:checked + .switch-track:before{ transform: translateX(18px); }
+  .weight-toggle-label{ font-weight:600; }
+  .weight-toggle-note{ color: var(--ink-muted); font-size:12px; }
+  th.weight-col, td.weight-col{ transition: opacity 0.2s; }
+  .weight-disabled th.weight-col, .weight-disabled td.weight-col{ opacity: 0.35; }
+  .weight-disabled input.dealer-weight{ pointer-events:none; }
+
   /* Summary cards */
   .summary-grid{
     display:grid;
@@ -310,12 +338,21 @@
         <h2>1 · Input Manifest</h2>
         <button class="btn small" id="loadExample" type="button">Load example</button>
       </div>
+      <div class="weight-toggle-row" id="weightToggleRow">
+        <label class="switch">
+          <input type="checkbox" id="weightedModeToggle">
+          <span class="switch-track"></span>
+        </label>
+        <span class="weight-toggle-label">Weighted allocation</span>
+        <span class="weight-toggle-note">— off: every dealer has equal claim to supply (V1). on: supply is split in proportion to each dealer's weight (V2).</span>
+      </div>
       <div class="panel-body">
         <table class="manifest" id="dealerTable">
           <thead>
             <tr>
-              <th style="width:45%">Dealer</th>
-              <th style="width:35%">Vehicles requested</th>
+              <th style="width:35%">Dealer</th>
+              <th style="width:25%">Vehicles requested</th>
+              <th class="weight-col" style="width:20%">Weight</th>
               <th style="width:20%"></th>
             </tr>
           </thead>
@@ -390,13 +427,14 @@
 
   let dealerIdCounter = 0;
 
-  function addDealerRow(name, demand){
+  function addDealerRow(name, demand, weight){
     dealerIdCounter++;
     const tr = document.createElement('tr');
     tr.dataset.id = dealerIdCounter;
     tr.innerHTML = `
       <td><input type="text" class="dealer-name" value="${name}"></td>
       <td><input type="number" class="dealer-demand" min="0" value="${demand}"></td>
+      <td class="weight-col"><input type="number" class="dealer-weight" min="0.01" step="0.1" value="${weight != null ? weight : 1}"></td>
       <td><button class="row-remove" type="button" title="Remove dealer">✕</button></td>
     `;
     tr.querySelector('.row-remove').addEventListener('click', () => {
@@ -407,76 +445,92 @@
 
   function loadExample(){
     dealerRows.innerHTML = '';
-    addDealerRow('Dealer A — Downtown', 40);
-    addDealerRow('Dealer B — Suburban Mall', 25);
-    addDealerRow('Dealer C — Highway Plaza', 60);
-    addDealerRow('Dealer D — Airport Route', 15);
-    addDealerRow('Dealer E — Industrial Park', 30);
+    addDealerRow('Dealer A — Downtown', 40, 1.5);
+    addDealerRow('Dealer B — Suburban Mall', 25, 1);
+    addDealerRow('Dealer C — Highway Plaza', 60, 2);
+    addDealerRow('Dealer D — Airport Route', 15, 0.5);
+    addDealerRow('Dealer E — Industrial Park', 30, 1);
     supplyInput.value = 100;
   }
 
-  document.getElementById('addDealer').addEventListener('click', () => addDealerRow('New dealer', 0));
+  document.getElementById('addDealer').addEventListener('click', () => addDealerRow('New dealer', 0, 1));
   document.getElementById('loadExample').addEventListener('click', loadExample);
   document.getElementById('resetBtn').addEventListener('click', () => {
     dealerRows.innerHTML = '';
-    addDealerRow('Dealer A', 0);
+    addDealerRow('Dealer A', 0, 1);
     supplyInput.value = 100;
     resultsSection.style.display = 'none';
   });
 
-  // ---------- Max-Min Fairness algorithm ----------
-  // Returns { allocation: [...], rounds: [ {waterLevel, cappedDealers:[{idx,amount}], note} ], surplus }
-  function maxMinFairness(names, demands, supply){
+  const weightedModeToggle = document.getElementById('weightedModeToggle');
+  const dealerTable = document.getElementById('dealerTable');
+  function syncWeightedModeStyle(){
+    dealerTable.classList.toggle('weight-disabled', !weightedModeToggle.checked);
+  }
+  weightedModeToggle.addEventListener('change', syncWeightedModeStyle);
+  syncWeightedModeStyle();
+
+  // ---------- Max-Min Fairness algorithm (weighted generalization) ----------
+  // When every weight is 1, this reduces exactly to the classic unweighted water-filling
+  // algorithm from V1 — weights are the only thing that changes the math.
+  //
+  // Each round we compute a "water level per unit weight" (t): remaining supply divided
+  // by the sum of weights of dealers still in the pool. A dealer's tentative allocation
+  // for the round is t * their own weight — so a dealer with weight 2 is entitled to twice
+  // the increment of a dealer with weight 1 in the same round.
+  //
+  // Returns { allocation: [...], rounds: [...], surplus }
+  function maxMinFairness(names, demands, weights, supply){
     const n = demands.length;
     const allocation = new Array(n).fill(0);
     let remainingSupply = supply;
-    let active = names.map((_, i) => i).filter(i => demands[i] > 0);
+    let active = names.map((_, i) => i).filter(i => demands[i] > 0 && weights[i] > 0);
     const rounds = [];
     let roundNum = 0;
     const EPS = 1e-9;
 
     while (active.length > 0 && remainingSupply > EPS){
       roundNum++;
-      const share = remainingSupply / active.length;
+      const activeWeightSum = active.reduce((sum, i) => sum + weights[i], 0);
+      const t = remainingSupply / activeWeightSum; // water level per unit weight
 
-      // find dealers whose remaining demand <= share (they get capped this round)
       const capped = [];
       const notCapped = [];
       active.forEach(i => {
         const remainingDemand = demands[i] - allocation[i];
-        if (remainingDemand <= share + EPS){
-          capped.push({ idx: i, amount: remainingDemand });
+        const tentative = t * weights[i];
+        if (remainingDemand <= tentative + EPS){
+          capped.push({ idx: i, amount: remainingDemand, tentative });
         } else {
           notCapped.push(i);
         }
       });
 
       if (capped.length > 0){
-        // Allocate capped dealers their full remaining demand
         capped.forEach(c => {
           allocation[c.idx] += c.amount;
           remainingSupply -= c.amount;
         });
         rounds.push({
           roundNum,
-          waterLevel: share,
+          waterLevel: t,
           activeCountBefore: active.length,
-          cappedDealers: capped.map(c => ({ idx: c.idx, name: names[c.idx], amount: c.amount })),
-          uncappedDealers: notCapped.map(i => names[i]),
+          activeWeightSum,
+          cappedDealers: capped.map(c => ({ idx: c.idx, name: names[c.idx], weight: weights[c.idx], amount: c.amount, tentative: c.tentative })),
+          uncappedDealers: notCapped.map(i => ({ idx: i, name: names[i], weight: weights[i] })),
           remainingSupplyAfter: remainingSupply,
           type: 'capped'
         });
         active = notCapped;
       } else {
-        // Nobody capped: everyone in `active` gets the equal share
-        active.forEach(i => { allocation[i] += share; });
+        active.forEach(i => { allocation[i] += t * weights[i]; });
         rounds.push({
           roundNum,
-          waterLevel: share,
+          waterLevel: t,
           activeCountBefore: active.length,
+          activeWeightSum,
           cappedDealers: [],
-          uncappedDealers: active.map(i => names[i]),
-          equalShareGivenTo: active.map(i => names[i]),
+          equalShareGivenTo: active.map(i => ({ idx: i, name: names[i], weight: weights[i], amount: t * weights[i] })),
           remainingSupplyAfter: 0,
           type: 'final'
         });
@@ -493,6 +547,7 @@
   let currentResult = null;
   let currentNames = [];
   let currentDemands = [];
+  let currentWeights = [];
   let currentSupply = 0;
   let stepIndex = 0; // 0 = before any round, N = after round N
   let playTimer = null;
@@ -505,16 +560,10 @@
       const round = currentResult.rounds[r];
       if (round.type === 'capped'){
         round.cappedDealers.forEach(c => { snap[c.idx] += c.amount; });
-        round.uncappedDealers.forEach(name => {
-          // uncapped dealers don't receive allocation in a 'capped' round
-        });
+        // uncapped dealers don't receive allocation in a 'capped' round
       } else {
-        // final round: everyone remaining gets waterLevel
-        currentNames.forEach((name, i) => {
-          if (round.equalShareGivenTo.includes(name)){
-            snap[i] += round.waterLevel;
-          }
-        });
+        // final round: everyone remaining gets t * their own weight
+        round.equalShareGivenTo.forEach(d => { snap[d.idx] += d.amount; });
       }
     }
     return snap;
@@ -524,15 +573,17 @@
     const container = document.getElementById('barsContainer');
     container.innerHTML = '';
     const maxDemand = Math.max(...currentDemands, 1);
+    const weighted = weightedModeToggle.checked;
     currentNames.forEach((name, i) => {
       const demand = currentDemands[i];
       const alloc = snapAllocation[i];
       const pct = Math.min(100, (alloc / maxDemand) * 100);
       const demandPct = Math.min(100, (demand / maxDemand) * 100);
+      const label = weighted ? `${name} (w=${round2(currentWeights[i])})` : name;
       const row = document.createElement('div');
       row.className = 'bar-row';
       row.innerHTML = `
-        <div class="bar-name">${name}</div>
+        <div class="bar-name">${label}</div>
         <div class="bar-track">
           <div class="bar-fill" style="width:${pct}%;"></div>
           <div class="bar-demand-mark" style="left:${demandPct}%;"></div>
@@ -576,24 +627,33 @@
 
   function renderTrace(){
     const log = document.getElementById('traceLog');
+    const weighted = weightedModeToggle.checked;
     log.innerHTML = '';
     currentResult.rounds.forEach(round => {
       const div = document.createElement('div');
       div.className = 'trace-round';
       let lines = '';
-      lines += `<div class="trace-round-title">ROUND ${round.roundNum} — water level = ${round2(round.waterLevel)} units/dealer (supply split across ${round.activeCountBefore} active dealer${round.activeCountBefore===1?'':'s'})</div>`;
+      const levelLabel = weighted
+        ? `water level = ${round2(round.waterLevel)} units per unit weight (remaining supply ÷ total active weight of ${round2(round.activeWeightSum)})`
+        : `water level = ${round2(round.waterLevel)} units/dealer (supply split across ${round.activeCountBefore} active dealer${round.activeCountBefore===1?'':'s'})`;
+      lines += `<div class="trace-round-title">ROUND ${round.roundNum} — ${levelLabel}</div>`;
 
       if (round.type === 'capped'){
         round.cappedDealers.forEach(c => {
-          lines += `<div class="trace-line capped">↳ ${c.name}: remaining demand (${round2(c.amount)}) ≤ water level → CAPPED, allocated ${round2(c.amount)} in full, removed from pool</div>`;
+          const tentativeNote = weighted ? ` (tentative = ${round2(round.waterLevel)} × weight ${round2(c.weight)} = ${round2(c.tentative)})` : '';
+          lines += `<div class="trace-line capped">↳ ${c.name}: remaining demand (${round2(c.amount)}) ≤ tentative share${tentativeNote} → CAPPED, allocated ${round2(c.amount)} in full, removed from pool</div>`;
         });
         if (round.uncappedDealers.length){
-          lines += `<div class="trace-line">↳ Still active next round: ${round.uncappedDealers.join(', ')}</div>`;
+          const names = round.uncappedDealers.map(d => weighted ? `${d.name} (weight ${round2(d.weight)})` : d.name);
+          lines += `<div class="trace-line">↳ Still active next round: ${names.join(', ')}</div>`;
         }
         lines += `<div class="trace-line">↳ Supply remaining after this round: ${round2(round.remainingSupplyAfter)}</div>`;
       } else {
-        lines += `<div class="trace-line final">↳ No dealer's remaining demand is below the water level — all remaining dealers receive the equal share of ${round2(round.waterLevel)}</div>`;
-        lines += `<div class="trace-line final">↳ Allocated to: ${round.equalShareGivenTo.join(', ')}</div>`;
+        lines += `<div class="trace-line final">↳ No remaining dealer's demand is below its tentative share — all remaining dealers receive water level × their own weight</div>`;
+        round.equalShareGivenTo.forEach(d => {
+          const weightNote = weighted ? ` = ${round2(round.waterLevel)} × weight ${round2(d.weight)}` : '';
+          lines += `<div class="trace-line final">↳ ${d.name} allocated ${round2(d.amount)}${weightNote}</div>`;
+        });
         lines += `<div class="trace-line final">↳ Supply fully distributed. Algorithm terminates.</div>`;
       }
       div.innerHTML = lines;
@@ -646,8 +706,10 @@
       showError('Add at least one dealer before running the allocation.');
       return;
     }
+    const weightedMode = weightedModeToggle.checked;
     const names = [];
     const demands = [];
+    const weights = [];
     for (const row of rows){
       const name = row.querySelector('.dealer-name').value.trim() || 'Unnamed dealer';
       const demand = parseFloat(row.querySelector('.dealer-demand').value);
@@ -655,8 +717,17 @@
         showError(`"${name}" has an invalid demand value. Enter a non-negative number.`);
         return;
       }
+      let weight = 1;
+      if (weightedMode){
+        weight = parseFloat(row.querySelector('.dealer-weight').value);
+        if (isNaN(weight) || weight <= 0){
+          showError(`"${name}" has an invalid weight. Enter a number greater than 0.`);
+          return;
+        }
+      }
       names.push(name);
       demands.push(demand);
+      weights.push(weight);
     }
     const supply = parseFloat(supplyInput.value);
     if (isNaN(supply) || supply < 0){
@@ -666,8 +737,9 @@
 
     currentNames = names;
     currentDemands = demands;
+    currentWeights = weights;
     currentSupply = supply;
-    currentResult = maxMinFairness(names, demands, supply);
+    currentResult = maxMinFairness(names, demands, weights, supply);
     stepIndex = 0;
 
     resultsSection.style.display = 'block';
