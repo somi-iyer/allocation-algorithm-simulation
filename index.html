@@ -363,7 +363,7 @@
           <button class="btn small" id="addDealer" type="button">+ Add dealer</button>
           <div class="supply-field">
             <label for="supplyInput">Total vehicles available:</label>
-            <input type="number" id="supplyInput" min="0" value="100">
+            <input type="number" id="supplyInput" min="0" step="1" value="100">
           </div>
         </div>
 
@@ -412,7 +412,8 @@
   <footer class="notes">
     Algorithm: unweighted max-min (water-filling) fairness. Each round, remaining supply is split equally
     across dealers whose demand is not yet fully met; any dealer whose remaining demand is below that
-    equal share is capped at their demand, and the leftover is redistributed in the next round. See
+    equal share is capped at their demand, and the leftover is redistributed in the next round. Fair shares are then
+    converted to whole vehicles with the largest-remainder method, since a vehicle can't be split between dealers. See
     ALGORITHM.md in this repo for the full write-up.
   </footer>
 
@@ -433,7 +434,7 @@
     tr.dataset.id = dealerIdCounter;
     tr.innerHTML = `
       <td><input type="text" class="dealer-name" value="${name}"></td>
-      <td><input type="number" class="dealer-demand" min="0" value="${demand}"></td>
+      <td><input type="number" class="dealer-demand" min="0" step="1" value="${demand}"></td>
       <td class="weight-col"><input type="number" class="dealer-weight" min="0.01" step="0.1" value="${weight != null ? weight : 1}"></td>
       <td><button class="row-remove" type="button" title="Remove dealer">✕</button></td>
     `;
@@ -539,8 +540,49 @@
       }
     }
 
-    const surplus = remainingSupply > EPS ? remainingSupply : 0;
-    return { allocation, rounds, surplus };
+    // Water-filling yields a real-valued fair share; vehicles are indivisible, so convert it
+    // to whole vehicles (see reconcileToWholeVehicles below).
+    const reconciliation = reconcileToWholeVehicles(names, demands, allocation);
+    const totalPlaced = reconciliation.finalAllocation.reduce((a, b) => a + b, 0);
+    const surplus = Math.max(0, supply - totalPlaced);
+    return { allocation: reconciliation.finalAllocation, fairShare: allocation, rounds, surplus, reconciliation };
+  }
+
+  // ---------- Whole-vehicle reconciliation (largest-remainder method) ----------
+  // A vehicle cannot be split between dealers, so the real-valued fair share (e.g. 21.25) is
+  // converted to whole vehicles: floor every dealer's share, then hand the leftover whole
+  // vehicles to the dealers with the largest fractional remainders.
+  // Ties on remainder go to the dealer with the largest unmet demand (demand minus floored
+  // share), then to input order, so results are deterministic.
+  // Guarantees: total allocated is unchanged, no dealer receives more than they requested,
+  // and every dealer lands within 1 vehicle of their fair share.
+  function reconcileToWholeVehicles(names, demands, fairShare){
+    const TOL = 1e-7;
+    const floors = fairShare.map(x => Math.floor(x + TOL));
+    const remainders = fairShare.map((x, i) => {
+      const r = x - floors[i];
+      return r < TOL ? 0 : r;
+    });
+    const target = Math.round(fairShare.reduce((a, b) => a + b, 0));
+    let leftover = target - floors.reduce((a, b) => a + b, 0);
+    const finalAllocation = floors.slice();
+    const extras = [];
+
+    const key = r => Math.round(r * 1e9); // compare remainders without float noise
+    const order = fairShare.map((_, i) => i)
+      .filter(i => remainders[i] > 0 && floors[i] < demands[i])
+      .sort((a, b) =>
+        key(remainders[b]) - key(remainders[a]) ||
+        (demands[b] - floors[b]) - (demands[a] - floors[a]) ||
+        a - b);
+
+    for (const i of order){
+      if (leftover <= 0) break;
+      finalAllocation[i] += 1;
+      leftover -= 1;
+      extras.push({ idx: i, name: names[i], remainder: remainders[i], unmetDemand: demands[i] - floors[i] });
+    }
+    return { fairShare, floors, target, extras, finalAllocation };
   }
 
   // ---------- Rendering ----------
@@ -553,7 +595,9 @@
   let playTimer = null;
 
   function computeSnapshotAllocation(upToRound){
-    // Recompute allocation as of end of round `upToRound` (0 = none run yet)
+    // Recompute allocation as of end of round `upToRound` (0 = none run yet).
+    // The step after the last round is the whole-vehicle reconciliation (final integers).
+    if (upToRound > currentResult.rounds.length) return currentResult.allocation.slice();
     const n = currentNames.length;
     const snap = new Array(n).fill(0);
     for (let r = 0; r < upToRound; r++){
@@ -654,11 +698,32 @@
           const weightNote = weighted ? ` = ${round2(round.waterLevel)} × weight ${round2(d.weight)}` : '';
           lines += `<div class="trace-line final">↳ ${d.name} allocated ${round2(d.amount)}${weightNote}</div>`;
         });
-        lines += `<div class="trace-line final">↳ Supply fully distributed. Algorithm terminates.</div>`;
+        lines += `<div class="trace-line final">↳ Supply fully distributed as fair shares (may be fractional — see whole-vehicle reconciliation below).</div>`;
       }
       div.innerHTML = lines;
       log.appendChild(div);
     });
+
+    const rec = currentResult.reconciliation;
+    const recDiv = document.createElement('div');
+    recDiv.className = 'trace-round';
+    let recLines = `<div class="trace-round-title">WHOLE-VEHICLE RECONCILIATION — a vehicle can't be split between dealers</div>`;
+    const allWhole = rec.fairShare.every((x, i) => Math.abs(x - rec.floors[i]) < 1e-7);
+    if (allWhole){
+      recLines += `<div class="trace-line final">↳ Every fair share is already a whole number — no rounding needed</div>`;
+    } else {
+      rec.fairShare.forEach((x, i) => {
+        recLines += `<div class="trace-line">↳ ${currentNames[i]}: fair share ${round2(x)} → floor ${rec.floors[i]} (remainder ${round2(x - rec.floors[i])})</div>`;
+      });
+      const leftoverCount = rec.target - rec.floors.reduce((a, b) => a + b, 0);
+      recLines += `<div class="trace-line">↳ Whole vehicles still to place after flooring: ${leftoverCount}. Rule: largest fractional remainder first; ties go to the dealer with the largest unmet demand, then input order</div>`;
+      rec.extras.forEach(e => {
+        recLines += `<div class="trace-line capped">↳ +1 vehicle to ${e.name} (remainder ${round2(e.remainder)}, unmet demand ${e.unmetDemand})</div>`;
+      });
+    }
+    recLines += `<div class="trace-line final">↳ Final allocation: ${currentNames.map((nm, i) => `${nm} ${rec.finalAllocation[i]}`).join(', ')}</div>`;
+    recDiv.innerHTML = recLines;
+    log.appendChild(recDiv);
 
     if (currentResult.surplus > 0){
       const div = document.createElement('div');
@@ -668,17 +733,23 @@
     }
   }
 
+  function totalSteps(){
+    return currentResult.rounds.length + 1; // +1 = whole-vehicle reconciliation
+  }
+
   function updateReplayStatus(){
-    const total = currentResult.rounds.length;
-    document.getElementById('replayStatus').textContent =
-      stepIndex === 0 ? `Showing: before allocation (0 / ${total} rounds)` :
-      `Showing: after round ${stepIndex} of ${total}`;
+    const rounds = currentResult.rounds.length;
+    let text;
+    if (stepIndex === 0) text = `Showing: before allocation (0 / ${rounds} rounds)`;
+    else if (stepIndex <= rounds) text = `Showing: after round ${stepIndex} of ${rounds} (fair share, before whole-vehicle rounding)`;
+    else text = 'Showing: final allocation in whole vehicles';
+    document.getElementById('replayStatus').textContent = text;
     document.getElementById('stepBack').disabled = stepIndex === 0;
-    document.getElementById('stepFwd').disabled = stepIndex === currentResult.rounds.length;
+    document.getElementById('stepFwd').disabled = stepIndex === totalSteps();
   }
 
   function goToStep(idx){
-    stepIndex = Math.max(0, Math.min(currentResult.rounds.length, idx));
+    stepIndex = Math.max(0, Math.min(totalSteps(), idx));
     const snap = computeSnapshotAllocation(stepIndex);
     renderBars(snap);
     updateReplayStatus();
@@ -690,7 +761,7 @@
     if (playTimer){ stopPlay(); return; }
     document.getElementById('stepPlay').textContent = '⏸ Pause';
     playTimer = setInterval(() => {
-      if (stepIndex >= currentResult.rounds.length){ stopPlay(); return; }
+      if (stepIndex >= totalSteps()){ stopPlay(); return; }
       goToStep(stepIndex + 1);
     }, 900);
   });
@@ -713,8 +784,8 @@
     for (const row of rows){
       const name = row.querySelector('.dealer-name').value.trim() || 'Unnamed dealer';
       const demand = parseFloat(row.querySelector('.dealer-demand').value);
-      if (isNaN(demand) || demand < 0){
-        showError(`"${name}" has an invalid demand value. Enter a non-negative number.`);
+      if (isNaN(demand) || demand < 0 || !Number.isInteger(demand)){
+        showError(`"${name}" has an invalid demand value. Vehicles can't be split, so enter a whole number (0 or more).`);
         return;
       }
       let weight = 1;
@@ -730,8 +801,8 @@
       weights.push(weight);
     }
     const supply = parseFloat(supplyInput.value);
-    if (isNaN(supply) || supply < 0){
-      showError('Total vehicles available must be a non-negative number.');
+    if (isNaN(supply) || supply < 0 || !Number.isInteger(supply)){
+      showError('Total vehicles available must be a whole number (0 or more) — vehicles can\'t be split.');
       return;
     }
 
@@ -745,7 +816,7 @@
     resultsSection.style.display = 'block';
     renderSummary();
     renderTrace();
-    goToStep(currentResult.rounds.length); // show final state by default
+    goToStep(totalSteps()); // show final (whole-vehicle) state by default
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
