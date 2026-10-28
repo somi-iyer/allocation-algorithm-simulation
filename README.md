@@ -1,4 +1,4 @@
-# Vehicle Allocation — Max-Min Fairness Simulator
+# Vehicle Allocation - Max-Min Fairness Simulator
 
 An interactive, single-file prototype simulating **max-min fairness** - a publicly known allocation algorithm - applied to distributing a limited vehicle supply across dealers with different demand levels.
 
