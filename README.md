@@ -23,7 +23,27 @@ An interactive, single-file prototype simulating **max-min fairness** - a public
 
 Allocation problems like this show up constantly in B2B distribution - vehicles to dealers, inventory to retail locations, leads to sales reps, support tickets to agents. The "fair" answer is rarely as simple as an even split, and being able to actually simulate an allocation algorithm - not just describe it in a slide - is a useful way to pressure-test whether a proposed allocation logic will hold up before it goes live.
 
-This proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team
+***This proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team***
+
+Just checking some formatting techniques in .md files
+---
+- Something1
+- Something2
+- Something3
+
+* Something1
+    * Something 1.1
+    * Something 1.2
+        * Something 1.2.1
+* Something2
+* Something3
+
+1. Something1
+    1.1 Something1.1
+    1.2 Something1.2
+        1.2.1 Something 1.2.1
+2. Something2
+3. Something3
 
 ## How it works
 
