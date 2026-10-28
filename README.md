@@ -47,9 +47,8 @@ Lists:
 * Something3
 
 1. Something1
-    1.1 Something1.1
-    1.2 Something1.2
-        1.2.1 Something 1.2.1
+    1. Something1.1
+    2. Something1.2
 2. Something2
 3. Something3
 
