@@ -1,5 +1,8 @@
-# Max-Min Fairness - Water filling algorithm- How This Prototype Works
+# Max-Min Fairness - Water filling algorithm
 
+## Intention of this exercise
+- Use a publicly available algorithm and create a quick working prototype using AI ( just a free-tier of LLM) which proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team
+- Learn how to create professional .md files  
 ## The problem it solves
 
 An OEM (or distributor) has a fixed supply of vehicles and a set of dealers, each requesting a certain number of units. Total demand often exceeds supply. The naive approaches - first-come-first-served, or a flat percentage cut for everyone - both break down in practice:
@@ -90,7 +93,3 @@ Fair share: A=21.25, B=21.25, C=21.25, D=15, E=21.25 - every dealer either got t
 - **V2** adds the weighted generalization described above, exposed as an explicit on/off toggle in the tool rather than replacing V1's behavior - unweighted stays the default so the simpler model is still available and the two are easy to compare side by side.
 - **V2.1** makes allocations whole vehicles via largest-remainder reconciliation. It is a bug fix: V1 and V2 could output fractional allocations like 16.5 or 21.25, which don't match reality since a vehicle can't be split between dealers. Water-filling itself is unchanged; the fix is a final step layered on top, and demand/supply inputs are now validated as whole numbers.
 - **Not yet in scope:** alternative tie-break rules for rounding (e.g., favoring the higher-weight dealer), minimum-order or lot-size constraints (e.g., vehicles that ship in multiples), dynamic/time-varying weights (e.g., a weight that decays if a dealer under-sells their last allocation), and multi-resource allocation (allocating several vehicle trims/models simultaneously with cross-model constraints). Both are reasonable V3 candidates if this moved toward a real tool.
-
-## Intention of this exercise
-- Use a publicly available algorithm and create a quick working prototype using AI ( just a free-tier of LLM) which proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team
-- Learn how to create professional .md files
