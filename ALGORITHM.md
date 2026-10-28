@@ -92,4 +92,5 @@ Fair share: A=21.25, B=21.25, C=21.25, D=15, E=21.25 - every dealer either got t
 - **Not yet in scope:** alternative tie-break rules for rounding (e.g., favoring the higher-weight dealer), minimum-order or lot-size constraints (e.g., vehicles that ship in multiples), dynamic/time-varying weights (e.g., a weight that decays if a dealer under-sells their last allocation), and multi-resource allocation (allocating several vehicle trims/models simultaneously with cross-model constraints). Both are reasonable V3 candidates if this moved toward a real tool.
 
 ## Intention of this exercise
-Use a publicly available algorithm and create a quick working prototype using AI ( just a free-tier of LLM)
+- Use a publicly available algorithm and create a quick working prototype using AI ( just a free-tier of LLM) which proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team
+- Learn how to create professional .md files
