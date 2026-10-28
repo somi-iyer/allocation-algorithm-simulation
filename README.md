@@ -26,7 +26,15 @@ Allocation problems like this show up constantly in B2B distribution - vehicles 
 ***This proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team***
 
 Just checking some formatting techniques in .md files
+
+Section 1
+
 ---
+
+Section 2 
+
+Lists: 
+
 - Something1
 - Something2
 - Something3
