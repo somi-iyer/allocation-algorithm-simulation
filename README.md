@@ -1,8 +1,8 @@
-# Fleet Allocation Engine — Max-Min Fairness Simulator
+# Vehicle Allocation — Max-Min Fairness Simulator
 
 An interactive, single-file prototype simulating **max-min fairness** - a publicly known allocation algorithm - applied to distributing a limited vehicle supply across dealers with different demand levels.
 
-**[Open `index.html`](./index.html) in any browser — no install, no server, no dependencies.**
+**[Open `index.html`](./index.html) in any browser - no install, no server, no dependencies.**
 
 ## What it does
 
@@ -21,7 +21,7 @@ An interactive, single-file prototype simulating **max-min fairness** - a public
 
 ## Why I built this
 
-Allocation problems like this show up constantly in B2B distribution - vehicles to dealers, inventory to retail locations, leads to sales reps, support tickets to agents. The "fair" answer is rarely as simple as an even split, and being able to actually simulate an allocation algorithm - not just describe it in a slide - is a useful way to pressure-test whether a proposed allocation logic will hold up before it goes anywhere near a real ops team.
+Allocation problems like this show up constantly in B2B distribution - vehicles to dealers, inventory to retail locations, leads to sales reps, support tickets to agents. The "fair" answer is rarely as simple as an even split, and being able to actually simulate an allocation algorithm - not just describe it in a slide - is a useful way to pressure-test whether a proposed allocation logic will hold up before it goes live.
 
 ## How it works
 
