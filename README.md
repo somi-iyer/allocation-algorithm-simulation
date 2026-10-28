@@ -23,6 +23,8 @@ An interactive, single-file prototype simulating **max-min fairness** - a public
 
 Allocation problems like this show up constantly in B2B distribution - vehicles to dealers, inventory to retail locations, leads to sales reps, support tickets to agents. The "fair" answer is rarely as simple as an even split, and being able to actually simulate an allocation algorithm - not just describe it in a slide - is a useful way to pressure-test whether a proposed allocation logic will hold up before it goes live.
 
+This proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team
+
 ## How it works
 
 See [`ALGORITHM.md`](./ALGORITHM.md) for the full explanation of the max-min fairness logic, the weighted generalization (V2), the whole-vehicle reconciliation step (V2.1), worked examples, and the scoping decisions behind each version.
