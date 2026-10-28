@@ -2,7 +2,8 @@
 
 ## Intention of this exercise
 - Use a publicly available algorithm and create a quick working prototype using AI ( just a free-tier of LLM) which proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team
-- Learn how to create professional .md files  
+- Learn how to create professional .md files
+  
 ## The problem it solves
 
 An OEM (or distributor) has a fixed supply of vehicles and a set of dealers, each requesting a certain number of units. Total demand often exceeds supply. The naive approaches - first-come-first-served, or a flat percentage cut for everyone - both break down in practice:
