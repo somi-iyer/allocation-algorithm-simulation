@@ -48,4 +48,5 @@ This is an inline sentence pointing to an [External Site][site-ref] and an [Inte
 [file-ref]: ALGORITHM.md
 
 Embed images
+
 ![Project Screenshot](Something.png)
