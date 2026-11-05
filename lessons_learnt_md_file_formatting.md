@@ -46,3 +46,6 @@ This is an inline sentence pointing to an [External Site][site-ref] and an [Inte
 
 [site-ref]: https://www.linkedin.com/in/soumya-iyer-56133216/ "My Linkedin Profile"
 [file-ref]: ALGORITHM.md
+
+Embed images
+![Project Screenshot](Something.png)
