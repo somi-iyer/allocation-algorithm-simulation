@@ -4,6 +4,7 @@ Just checking some formatting techniques in .md files
 ## Sub-heading
 ### Sub-sub heading
 
+Separator example
 
 Section 1
 
@@ -45,5 +46,3 @@ This is an inline sentence pointing to an [External Site][site-ref] and an [Inte
 
 [site-ref]: https://www.linkedin.com/in/soumya-iyer-56133216/ "My Linkedin Profile"
 [file-ref]: ALGORITHM.md
-
-
