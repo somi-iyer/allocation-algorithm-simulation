@@ -68,7 +68,7 @@ Jump straight to the [What it does](#what-it-does). Example of anchor heading.
 
 You can also use relative path and anchor heading combination
 
-This is an inline sentence pointing to an [External Site][site-ref] and an [Internal File][file-ref]. Notice I left a complete blank line.
+This is an inline sentence pointing to an [External Site][site-ref] and an [Internal File][file-ref]. Notice I left a complete blank line for it to work on github.
 
 [site-ref]: https://www.linkedin.com/in/soumya-iyer-56133216/ "My Linkedin Profile"
 [file-ref]: ALGORITHM.md
