@@ -86,7 +86,7 @@ Fair share: A=21.25, B=21.25, C=21.25, D=15, E=21.25 - every dealer either got t
 
 ## Scope
 
-- **V1** shipped unweighted only - every dealer treated as having equal claim to supply. That was a deliberate scope cut to get a correct, explainable baseline shipped first, not an oversight - see the [PRD collection](../prd-collection) for how this kind of scoping decision gets made and written up.
+- **V1** shipped unweighted only - every dealer treated as having equal claim to supply. That was a deliberate scope cut to get a correct, explainable baseline shipped first, not an oversight
 - **V2** adds the weighted generalization described above, exposed as an explicit on/off toggle in the tool rather than replacing V1's behavior - unweighted stays the default so the simpler model is still available and the two are easy to compare side by side.
 - **V2.1** makes allocations whole vehicles via largest-remainder reconciliation. It is a bug fix: V1 and V2 could output fractional allocations like 16.5 or 21.25, which don't match reality since a vehicle can't be split between dealers. Water-filling itself is unchanged; the fix is a final step layered on top, and demand/supply inputs are now validated as whole numbers.
 - **Not yet in scope:** alternative tie-break rules for rounding (e.g., favoring the higher-weight dealer), minimum-order or lot-size constraints (e.g., vehicles that ship in multiples), dynamic/time-varying weights (e.g., a weight that decays if a dealer under-sells their last allocation), and multi-resource allocation (allocating several vehicle trims/models simultaneously with cross-model constraints). Both are reasonable V3 candidates if this moved toward a real tool.
