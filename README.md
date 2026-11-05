@@ -58,9 +58,9 @@ Lists:
 3. Something3
 
 Link Styles:
-See my profile [Linkedin profile](https://www.linkedin.com/in/soumya-iyer-56133216/) to know more about me
-Know more about me [Linkedin](https://www.linkedin.com/in/soumya-iyer-56133216/ "Go to Linkedin profile") to view repository.
-Please visit <https://www.linkedin.com/in/soumya-iyer-56133216/> for more information.
+- See my profile [Linkedin profile](https://www.linkedin.com/in/soumya-iyer-56133216/) to know more about me
+- Know more about me [Linkedin](https://www.linkedin.com/in/soumya-iyer-56133216/ "Go to Linkedin profile") to view repository. This one with a hover.
+- Please visit <https://www.linkedin.com/in/soumya-iyer-56133216/> for more information.
 
 Read the [Alogorithm](algorithm.md) before starting.
 
@@ -69,8 +69,8 @@ Jump straight to the [What it does](#what-it-does).
 You can also use relative path and anchor heading combination
 
 This is an inline sentence pointing to an [External Site][site-ref] and an [Internal File][file-ref].
-[site-ref]: https://example.com](https://www.linkedin.com/in/soumya-iyer-56133216/ "My Linkedin Profile"
-[file-ref]: alogorithm.md
+- [site-ref]: https://example.com](https://www.linkedin.com/in/soumya-iyer-56133216/ "My Linkedin Profile"
+- [file-ref]: alogorithm.md
 
 
 ## How it works
