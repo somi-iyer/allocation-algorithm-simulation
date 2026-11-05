@@ -50,3 +50,27 @@ This is an inline sentence pointing to an [External Site][site-ref] and an [Inte
 Embed images
 
 ![Project Screenshot](Something.png)
+
+
+```mermaid
+graph TD
+    A[Start] --> B(Process Data)
+    B --> C{Is it valid?}
+    C -- Yes --> D[Save to Database]
+    C -- No --> E[Log Error]
+```
+
+
+```mermaid
+graph LR
+    User -->|Logs in| Website
+    Website --> Database
+```
+
+
+```mermaid
+sequenceDiagram
+    Client->>Server: GET /api/data
+    Server-->>Client: 200 OK (JSON Payload)
+```
+
