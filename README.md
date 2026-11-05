@@ -36,16 +36,3 @@ The tool loads with a 5-dealer example pre-filled. Hit **Run allocation** to see
 ## Side lessons learnt in the process
 I learnt how to format a .md file properly. Please see [Lessons Learnt md file formatting](lessons_learnt_md_file_formatting.md) 
 
-- Use headings and sub-headings using hash to create structure - #, ##, ###
-- Emphasise on text using asterisk wrappers - * for italic, ** for bold, *** for both italic and bold
-- Create lists- unordered, ordered with nesting as applicable
-- Links- External, Within same file, to other local files
-- Embed images and videos
-
-Tips:
-- Don't wrap headings in astericks- Because markdown viewers automatically make headings bold and large, it will be redundant and can break some markdown tools
-- Use Prettier - Code formatter extension i.e. esbenp.prettier-vscode and instruct VS Code to use it as your default formatter for Markdown files so everytime you save a file the extension will work
-- Don't use a separator simply under paragraph, heading or to create blank space. Use only for massive topic shifts, footnotes or separating document metadata
-- Use separators with blank lines otherwise entire first paragraph section morphs into a giant, bold Heading 1, and your divider line completely disappears!
-- Markdown uses a dedicated image syntax for static pictures, and a powerful system called Mermaid.js to build text-based diagrams that render automatically in modern viewers like VS Code, GitHub, Obsidian, and Notion.
-
