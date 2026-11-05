@@ -62,7 +62,7 @@ Link Styles:
 - Know more about me [Linkedin](https://www.linkedin.com/in/soumya-iyer-56133216/ "Go to Linkedin profile") to view repository. This one with a hover.
 - Please visit <https://www.linkedin.com/in/soumya-iyer-56133216/> for more information.
 
-Read the [Alogorithm](algorithm.md) before starting.
+Read the [Algorithm](ALGORITHM.md) before starting.
 
 Jump straight to the [What it does](#what-it-does).
 
@@ -70,7 +70,7 @@ You can also use relative path and anchor heading combination
 
 This is an inline sentence pointing to an [External Site][site-ref] and an [Internal File][file-ref].
 - [site-ref]: [https://www.linkedin.com/in/soumya-iyer-56133216/] "My Linkedin Profile"
-- [file-ref]: alogorithm.md
+- [file-ref]: ALGORITHM.md
 
 
 ## How it works
