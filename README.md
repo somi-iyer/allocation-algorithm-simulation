@@ -25,6 +25,9 @@ Allocation problems like this show up constantly in B2B distribution - vehicles 
 
 ***This proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team***
 
+## Intention of this exercise
+- Use a publicly available algorithm and create a quick working prototype using AI ( just a free-tier of LLM) which proves my ability to quickly seek feedback and test a concept without any dependency on Dev Team
+  
 ## How it works
 
 See [`ALGORITHM.md`](./ALGORITHM.md) for the full explanation of the max-min fairness logic, the weighted generalization (V2), the whole-vehicle reconciliation step (V2.1), worked examples, and the scoping decisions behind each version.
