@@ -34,5 +34,5 @@ See [`ALGORITHM.md`](./ALGORITHM.md) for the full explanation of the max-min fai
 The tool loads with a 5-dealer example pre-filled. Hit **Run allocation** to see it work, or edit the dealers/demand/supply first (demand and supply must be whole numbers - you'll get a clear error message otherwise). Use **Next round / Prev round / Play** under the bar chart to step through how the allocation was built up; the last step is the final whole-vehicle allocation.
 
 ## Side lessons learnt in the process
-I learnt how to format a .md file properly. Please see [Lessons Learnt md file formatting](lessons_learnt_md_file_formatting.md) 
+I learnt how to format a .md file properly. Please see [here](lessons_learnt_md_file_formatting.md) 
 
